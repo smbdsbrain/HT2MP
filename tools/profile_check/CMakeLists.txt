@@ -1,0 +1,10 @@
+add_executable(ht2mp-profile-check main.cpp)
+target_link_libraries(ht2mp-profile-check PRIVATE ht2mp_game)
+target_compile_features(ht2mp-profile-check PRIVATE cxx_std_20)
+
+if(MSVC)
+  target_compile_options(ht2mp-profile-check PRIVATE /W4 /permissive- /Zc:__cplusplus /FS)
+  target_compile_definitions(ht2mp-profile-check PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+else()
+  target_compile_options(ht2mp-profile-check PRIVATE -Wall -Wextra -Wpedantic -Wconversion -Wshadow)
+endif()

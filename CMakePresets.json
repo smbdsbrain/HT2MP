@@ -1,0 +1,118 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 24,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-x64",
+      "displayName": "Windows x64 Release",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/windows-x64",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "HT2MP_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "windows-x86",
+      "displayName": "Windows x86 Release",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "Win32",
+      "binaryDir": "${sourceDir}/build/windows-x86",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "HT2MP_BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "server-windows-x64",
+      "displayName": "HT2MP Server - Windows x64 Release",
+      "generator": "Visual Studio 17 2022",
+      "architecture": "x64",
+      "binaryDir": "${sourceDir}/build/server-windows-x64",
+      "cacheVariables": {
+        "CMAKE_CONFIGURATION_TYPES": "Debug;Release",
+        "HT2MP_BUILD_TESTS": "ON",
+        "HT2MP_SERVER_ONLY": "ON"
+      }
+    },
+    {
+      "name": "server-linux-x64",
+      "displayName": "HT2MP Server - Linux x86_64 Release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/server-linux-x64",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "HT2MP_BUILD_TESTS": "ON",
+        "HT2MP_SERVER_ONLY": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "build-x64",
+      "configurePreset": "windows-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "build-x86",
+      "configurePreset": "windows-x86",
+      "configuration": "Release"
+    },
+    {
+      "name": "package-client-windows-x86",
+      "configurePreset": "windows-x86",
+      "configuration": "Release",
+      "targets": ["package"]
+    },
+    {
+      "name": "build-server-windows-x64",
+      "configurePreset": "server-windows-x64",
+      "configuration": "Release"
+    },
+    {
+      "name": "package-server-windows-x64",
+      "configurePreset": "server-windows-x64",
+      "configuration": "Release",
+      "targets": ["package"]
+    },
+    {
+      "name": "build-server-linux-x64",
+      "configurePreset": "server-linux-x64"
+    },
+    {
+      "name": "package-server-linux-x64",
+      "configurePreset": "server-linux-x64",
+      "targets": ["package"]
+    }
+  ],
+  "testPresets": [
+    {
+      "name": "test-x64",
+      "configurePreset": "windows-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-x86",
+      "configurePreset": "windows-x86",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-server-windows-x64",
+      "configurePreset": "server-windows-x64",
+      "configuration": "Release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "test-server-linux-x64",
+      "configurePreset": "server-linux-x64",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

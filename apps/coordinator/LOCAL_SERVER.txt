@@ -1,0 +1,16 @@
+HT2MP local server
+==================
+
+Run start-server.cmd. The coordinator listens on UDP 28020 and prints a new
+random access token. Enter that token in every launcher. Do not reuse it for
+other services or publish it in an issue, log, screenshot, or repository.
+
+The default binding is 0.0.0.0:28020 so computers on the same LAN can connect.
+Allow the application only on private networks in Windows Firewall. Internet
+hosting additionally requires forwarding UDP 28020 on the router.
+
+An alternative endpoint can be supplied as the only argument:
+
+  start-server.cmd 127.0.0.1:28021
+
+Stop the server with Ctrl+C. Only one server can listen on a port.

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Помощь и вопросы
+    url: https://github.com/smbdsbrain/HT2MP/discussions
+    about: Используйте Discussions для установки, настройки сети и поиска игроков.
+  - name: Приватный отчёт об уязвимости
+    url: https://github.com/smbdsbrain/HT2MP/security/advisories/new
+    about: Не публикуйте уязвимости, токены и приватные данные в обычном issue.

@@ -1,0 +1,227 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  HT2MP_PACKAGE_VERSION: 0.1.0-alpha.1
+
+jobs:
+  audit:
+    name: Public tree and secrets
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout complete history
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Validate release tag
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_REF_NAME -ne "v$env:HT2MP_PACKAGE_VERSION") {
+            throw "Tag $env:GITHUB_REF_NAME does not match v$env:HT2MP_PACKAGE_VERSION"
+          }
+      - name: Audit the public tree
+        shell: pwsh
+        run: ./tools/audit-public-tree.ps1
+      - name: Check whitespace
+        run: git log --check --oneline --all
+      - name: Scan Git history for secrets
+        uses: gitleaks/gitleaks-action@e0c47f4f8be36e29cdc102c57e68cb5cbf0e8d1e # v3.0.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  client-windows:
+    name: Client / Windows x86
+    needs: audit
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure
+        run: cmake --preset windows-x86 "-DHT2MP_PACKAGE_VERSION=${{ env.HT2MP_PACKAGE_VERSION }}"
+      - name: Build
+        run: cmake --build --preset build-x86 --parallel
+      - name: Test
+        run: ctest --preset test-x86
+      - name: Package
+        run: cmake --build --preset package-client-windows-x86 --parallel
+      - name: Verify package contents
+        shell: pwsh
+        run: |
+          $archive = "dist/client/HT2MP-client-$env:HT2MP_PACKAGE_VERSION-windows-x86.zip"
+          $target = Join-Path $env:RUNNER_TEMP 'client-package'
+          Expand-Archive -LiteralPath $archive -DestinationPath $target
+          $required = @(
+            'ht2mp-launcher.exe', 'ht2mp-client.exe', 'ht2mp-injector32.exe',
+            'ht2mp-bridge32.dll', 'README.md', 'LICENSE',
+            'THIRD_PARTY_NOTICES.md', 'assets/HT2MP.pl1', 'assets/README.txt'
+          )
+          foreach ($item in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $target $item) -PathType Leaf)) {
+              throw "Missing package file: $item"
+            }
+          }
+          $actual = Get-ChildItem -LiteralPath $target -Recurse -File |
+            ForEach-Object { $_.FullName.Substring($target.Length + 1).Replace('\', '/') } |
+            Sort-Object
+          $difference = Compare-Object ($required | Sort-Object) $actual
+          if ($difference) { throw "Client package does not match the public install contract" }
+          $unexpected = Get-ChildItem -LiteralPath $target -Recurse -File |
+            Where-Object Extension -in '.pdb', '.lib', '.exp', '.log', '.dmp'
+          if ($unexpected) { throw "Unexpected build artifacts in client package" }
+          $hash = (Get-FileHash -LiteralPath (Join-Path $target 'assets/HT2MP.pl1') -Algorithm SHA256).Hash
+          if ($hash -ne 'F25D4DC627B366C50CA30615A0DF46B43FA4E4B20D94DEA7658199A72A8DBA34') {
+            throw 'Packaged profile SHA-256 mismatch'
+          }
+      - name: Upload client package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: HT2MP-client-windows-x86
+          path: dist/client/HT2MP-client-${{ env.HT2MP_PACKAGE_VERSION }}-windows-x86.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  server-windows:
+    name: Server / Windows x64
+    needs: audit
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure
+        run: cmake --preset server-windows-x64 "-DHT2MP_PACKAGE_VERSION=${{ env.HT2MP_PACKAGE_VERSION }}"
+      - name: Build
+        run: cmake --build --preset build-server-windows-x64 --parallel
+      - name: Test
+        run: ctest --preset test-server-windows-x64
+      - name: Package
+        run: cmake --build --preset package-server-windows-x64 --parallel
+      - name: Verify package contents
+        shell: pwsh
+        run: |
+          $archive = "dist/server/HT2MP-server-$env:HT2MP_PACKAGE_VERSION-windows-x86_64.zip"
+          $target = Join-Path $env:RUNNER_TEMP 'server-windows-package'
+          Expand-Archive -LiteralPath $archive -DestinationPath $target
+          $required = @(
+            'start-server.cmd', 'bin/ht2mp-coordinator.exe',
+            'share/doc/ht2mp-server/README.md',
+            'share/doc/ht2mp-server/LICENSE',
+            'share/doc/ht2mp-server/THIRD_PARTY_NOTICES.md',
+            'share/doc/ht2mp-server/SERVER.md'
+          )
+          foreach ($item in $required) {
+            if (-not (Test-Path -LiteralPath (Join-Path $target $item) -PathType Leaf)) {
+              throw "Missing package file: $item"
+            }
+          }
+          $actual = Get-ChildItem -LiteralPath $target -Recurse -File |
+            ForEach-Object { $_.FullName.Substring($target.Length + 1).Replace('\', '/') } |
+            Sort-Object
+          $difference = Compare-Object ($required | Sort-Object) $actual
+          if ($difference) { throw "Windows server package does not match the public install contract" }
+          $unexpected = Get-ChildItem -LiteralPath $target -Recurse -File |
+            Where-Object Extension -in '.pdb', '.lib', '.exp', '.log', '.dmp'
+          if ($unexpected) { throw "Unexpected build artifacts in Windows server package" }
+      - name: Upload Windows server package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: HT2MP-server-windows-x86_64
+          path: dist/server/HT2MP-server-${{ env.HT2MP_PACKAGE_VERSION }}-windows-x86_64.zip
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  server-linux:
+    name: Server / Linux x86_64
+    needs: audit
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Configure
+        run: cmake --preset server-linux-x64 "-DHT2MP_PACKAGE_VERSION=${{ env.HT2MP_PACKAGE_VERSION }}"
+      - name: Build
+        run: cmake --build --preset build-server-linux-x64 --parallel
+      - name: Test
+        run: ctest --preset test-server-linux-x64
+      - name: Package
+        run: cmake --build --preset package-server-linux-x64 --parallel
+      - name: Verify package contents
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="dist/server/HT2MP-server-${HT2MP_PACKAGE_VERSION}-linux-x86_64.tar.gz"
+          listing="$(tar -tzf "$archive")"
+          actual="$(sed '/\/$/d' <<<"$listing" | sort)"
+          expected="$(printf '%s\n' \
+            'start-server.sh' \
+            'bin/ht2mp-coordinator' \
+            'share/doc/ht2mp-server/README.md' \
+            'share/doc/ht2mp-server/LICENSE' \
+            'share/doc/ht2mp-server/THIRD_PARTY_NOTICES.md' \
+            'share/doc/ht2mp-server/SERVER.md' | sort)"
+          diff -u <(printf '%s\n' "$expected") <(printf '%s\n' "$actual")
+          if grep -E '\.(pdb|lib|exp|log|dmp)$' <<<"$listing"; then
+            echo 'unexpected build artifacts in Linux server package' >&2
+            exit 1
+          fi
+      - name: Upload Linux server package
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: HT2MP-server-linux-x86_64
+          path: dist/server/HT2MP-server-${{ env.HT2MP_PACKAGE_VERSION }}-linux-x86_64.tar.gz
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
+
+  release:
+    name: Publish GitHub pre-release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [client-windows, server-windows, server-linux]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Download release packages
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: HT2MP-*
+          path: release
+          merge-multiple: true
+      - name: Create SHA-256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd release
+          sha256sum HT2MP-* > SHA256SUMS.txt
+      - name: Attest release packages
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/HT2MP-*
+      - name: Publish pre-release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "$GITHUB_REF_NAME" release/* \
+            --repo "$GITHUB_REPOSITORY" \
+            --verify-tag \
+            --prerelease \
+            --title "HT2MP $GITHUB_REF_NAME" \
+            --notes "Первый публичный alpha-релиз HT2MP. Инструкции, поддержанные возможности и известные ограничения приведены в README и CHANGELOG."

@@ -1,0 +1,3 @@
+LIBRARY "ht2mp-bridge32"
+EXPORTS
+    Ht2mpBootstrap=_Ht2mpBootstrap@4

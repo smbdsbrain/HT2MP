@@ -1,0 +1,51 @@
+name: Сообщить об ошибке
+description: Воспроизводимая проблема клиента, сервера или лаунчера
+title: '[Bug] '
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: Не прикладывайте игровые файлы, сохранения, токены или неочищенные логи.
+  - type: input
+    id: version
+    attributes:
+      label: Версия HT2MP
+      placeholder: v0.1.0-alpha.1
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Компонент
+      options:
+        - Windows-клиент или лаунчер
+        - Windows-сервер
+        - Linux-сервер
+        - Сборка из исходников
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Шаги воспроизведения
+      description: Опишите минимальную последовательность действий.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Ожидаемый и фактический результат
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Очищенная диагностика
+      description: Удалите токены, IP, имена игроков и абсолютные пути.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Проверка приватности
+      options:
+        - label: Я удалил токены, адреса, имена, локальные пути и не прикладываю файлы игры или сохранения.
+          required: true
