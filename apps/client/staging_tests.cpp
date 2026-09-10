@@ -85,11 +85,14 @@ std::vector<std::byte> fake_i386_pe() {
   dos.e_lfanew = 0x80;
   std::memcpy(image.data(), &dos, sizeof(dos));
   constexpr DWORD signature = IMAGE_NT_SIGNATURE;
-  std::memcpy(image.data() + 0x80U, &signature, sizeof(signature));
+  constexpr std::size_t signature_offset = 0x80U;
+  constexpr std::size_t file_header_offset = 0x84U;
+  static_assert(file_header_offset - signature_offset == sizeof(signature));
+  std::memcpy(image.data() + signature_offset, &signature, sizeof(signature));
   IMAGE_FILE_HEADER header{};
   header.Machine = IMAGE_FILE_MACHINE_I386;
   header.NumberOfSections = 1U;
-  std::memcpy(image.data() + 0x80U + sizeof(signature), &header, sizeof(header));
+  std::memcpy(image.data() + file_header_offset, &header, sizeof(header));
   return image;
 }
 
