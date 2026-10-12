@@ -87,7 +87,7 @@ jobs:
             throw 'Packaged profile SHA-256 mismatch'
           }
       - name: Upload client package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: HT2MP-client-windows-x86
           path: dist/client/HT2MP-client-${{ env.HT2MP_PACKAGE_VERSION }}-windows-x86.zip
@@ -137,7 +137,7 @@ jobs:
             Where-Object Extension -in '.pdb', '.lib', '.exp', '.log', '.dmp'
           if ($unexpected) { throw "Unexpected build artifacts in Windows server package" }
       - name: Upload Windows server package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: HT2MP-server-windows-x86_64
           path: dist/server/HT2MP-server-${{ env.HT2MP_PACKAGE_VERSION }}-windows-x86_64.zip
@@ -180,7 +180,7 @@ jobs:
             exit 1
           fi
       - name: Upload Linux server package
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: HT2MP-server-linux-x86_64
           path: dist/server/HT2MP-server-${{ env.HT2MP_PACKAGE_VERSION }}-linux-x86_64.tar.gz
